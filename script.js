@@ -11,64 +11,6 @@ const IMAGE_FORMATS = ['jpeg', 'jpg', 'png', 'gif', 'webp', 'bmp', 'svg'];
 const VIDEO_FORMATS = ['mp4', 'webm'];
 const ARCHIVE_FORMATS = ['zip', 'rar'];
 
-// ============ СКАНИРОВАНИЕ ПАПКИ DATA ============
-async function scanDataFolder() {
-    // Список известных файлов (можно дополнить вручную)
-    const knownFiles = [
-        'mus1.mp3'
-        // Добавляй сюда новые файлы, если нужно
-    ];
-    
-    // Пытаемся загрузить список файлов из data/files.txt (если есть)
-    try {
-        const response = await fetch(DATA_FOLDER + '/files.txt');
-        if (response.ok) {
-            const text = await response.text();
-            const filesFromTxt = text.split('\n').map(f => f.trim()).filter(f => f.length > 0);
-            return [...new Set([...knownFiles, ...filesFromTxt])];
-        }
-    } catch (e) {}
-    
-    return knownFiles;
-}
-
-async function buildContentFromFiles(files) {
-    const musicData = [];
-    const minecraftData = [];
-    const gamesData = [];
-    const otherData = [];
-    
-    for (const file of files) {
-        const type = getFileType(file);
-        const title = file.replace(/\.[^/.]+$/, ''); // Имя файла без расширения
-        
-        // Проверяем существует ли файл
-        const exists = await fileExists(file);
-        if (!exists) continue;
-        
-        const item = { type: type, title: title, fileName: file, id: Date.now() + Math.random() };
-        
-        // Распределяем по разделам (можно настроить)
-        if (type === 'music') {
-            musicData.push(item);
-        } else if (type === 'image') {
-            // Картинки распределяем равномерно
-            if (minecraftData.length <= gamesData.length) {
-                minecraftData.push(item);
-            } else {
-                gamesData.push(item);
-            }
-        } else {
-            otherData.push(item);
-        }
-    }
-    
-    saveData('music_data', musicData);
-    saveData('minecraft_data', minecraftData);
-    saveData('games_data', gamesData);
-    saveData('other_data', otherData);
-}
-
 // ============ ХРАНИЛИЩЕ ДАННЫХ ============
 function getData(key) {
     try { const data = localStorage.getItem(key); return data ? JSON.parse(data) : []; }
@@ -80,18 +22,53 @@ function saveData(key, data) {
     catch (e) {}
 }
 
-async function initData() {
-    const files = await scanDataFolder();
-    await buildContentFromFiles(files);
+// Загрузка данных с GitHub
+async function loadDataFromGitHub() {
+    try {
+        const response = await fetch(DATA_FOLDER + '/data.json');
+        if (response.ok) {
+            const remoteData = await response.json();
+            // Сохраняем в localStorage
+            if (remoteData.music_data) saveData('music_data', remoteData.music_data);
+            if (remoteData.minecraft_data) saveData('minecraft_data', remoteData.minecraft_data);
+            if (remoteData.games_data) saveData('games_data', remoteData.games_data);
+            if (remoteData.other_data) saveData('other_data', remoteData.other_data);
+            return true;
+        }
+    } catch (e) {}
+    return false;
 }
 
-async function fileExists(filename) {
-    try {
-        const response = await fetch(DATA_FOLDER + '/' + filename, { method: 'HEAD' });
-        return response.ok;
-    } catch {
-        return false;
-    }
+// Экспорт данных для GitHub
+function exportAllData() {
+    return {
+        music_data: getData('music_data'),
+        minecraft_data: getData('minecraft_data'),
+        games_data: getData('games_data'),
+        other_data: getData('other_data')
+    };
+}
+
+function downloadDataFile() {
+    const data = exportAllData();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'data.json';
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+async function initData() {
+    // Пробуем загрузить с GitHub
+    const loaded = await loadDataFromGitHub();
+    
+    // Если не загрузилось — создаём пустые
+    if (!localStorage.getItem('music_data')) saveData('music_data', []);
+    if (!localStorage.getItem('minecraft_data')) saveData('minecraft_data', []);
+    if (!localStorage.getItem('games_data')) saveData('games_data', []);
+    if (!localStorage.getItem('other_data')) saveData('other_data', []);
 }
 
 function getFileUrl(item) {
@@ -237,8 +214,8 @@ function renderItem(item, index, section) {
     return '';
 }
 
-// ============ ДОБАВЛЕНИЕ КОНТЕНТА (только текст) ============
-function addContent(section) {
+// ============ ДОБАВЛЕНИЕ КОНТЕНТА ============
+async function addContent(section) {
     const dataKeyMap = { 'music': 'music_data', 'mc': 'minecraft_data', 'games': 'games_data', 'other': 'other_data' };
     const dataKey = dataKeyMap[section];
     const data = getData(dataKey);
@@ -252,11 +229,37 @@ function addContent(section) {
         saveData(dataKey, data);
         textarea.value = '';
         renderPage(section === 'mc' ? 'minecraft' : section);
+        return;
     }
     
-    // Файлы больше не добавляем через админку — просто кидаем в папку data
-    if (type === 'file') {
-        alert('Просто положите файл в папку data и нажмите Push в GitHub Desktop!');
+    const title = document.getElementById(`new-${section}-title`).value.trim();
+    const fileInput = document.getElementById(`new-${section}-file`);
+    const file = fileInput.files[0];
+    if (!file || !title) return;
+    
+    const fileType = getFileType(file.name);
+    const fileName = file.name;
+    
+    // Сохраняем в Base64 для локального использования
+    const base64Data = await new Promise(r => { 
+        const reader = new FileReader(); 
+        reader.onload = () => r(reader.result); 
+        reader.readAsDataURL(file); 
+    });
+    
+    data.unshift({ type: fileType, title: title, fileName: fileName, data: base64Data, id: Date.now() });
+    saveData(dataKey, data);
+    
+    document.getElementById(`new-${section}-title`).value = '';
+    fileInput.value = '';
+    renderPage(section === 'mc' ? 'minecraft' : section);
+    
+    // Предлагаем скачать обновлённый data.json
+    if (isAdmin) {
+        setTimeout(() => {
+            const shouldDownload = confirm('Файл добавлен! Скачать обновлённый data.json для загрузки на GitHub?');
+            if (shouldDownload) downloadDataFile();
+        }, 300);
     }
 }
 
@@ -272,6 +275,13 @@ function deleteItem(section, index) {
     data.splice(index, 1);
     saveData(dataKeyMap[section], data);
     renderPage(section);
+    
+    if (isAdmin) {
+        setTimeout(() => {
+            const shouldDownload = confirm('Элемент удалён! Скачать обновлённый data.json?');
+            if (shouldDownload) downloadDataFile();
+        }, 300);
+    }
 }
 
 // ============ DRAG AND DROP ============
@@ -393,6 +403,7 @@ function renderPage(page) {
 window.onload = async () => { 
     await initData(); 
     updateAdminUI(); 
+    renderPage('music');
 };
 document.addEventListener('click', function(e) { if (e.target === document.getElementById('lightbox')) closeLightbox(); });
 document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeLightbox(); });

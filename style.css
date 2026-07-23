@@ -64,10 +64,11 @@ body {
 }
 
 .main-menu {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
     gap: 20px;
-    justify-content: center;
+    max-width: 700px;
+    width: 100%;
     animation: fadeSlideIn 0.8s ease 0.4s both;
 }
 
@@ -75,16 +76,27 @@ body {
     background: #161b22;
     border: 1px solid #30363d;
     color: #c9d1d9;
-    padding: 20px 40px;
-    font-size: 1.2rem;
+    padding: 20px 10px;
+    font-size: 1.3rem;
     border-radius: 12px;
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
-    min-width: 150px;
+    justify-content: center;
+    gap: 12px;
+    width: 100%;
+    min-width: 0;
+    aspect-ratio: 1 / 1;
+}
+
+/* Для телефона — квадрат 2×2 */
+@media (max-width: 600px) {
+    .main-menu {
+        grid-template-columns: repeat(2, 1fr);
+        max-width: 350px;
+    }
 }
 
 .menu-btn:hover {
@@ -94,7 +106,10 @@ body {
     box-shadow: 0 15px 30px rgba(0, 0, 0, 0.5);
 }
 
-.menu-btn i { font-size: 2rem; transition: transform 0.3s ease; }
+.menu-btn i { 
+    font-size: 2.5rem; 
+    transition: transform 0.3s ease;
+}
 .menu-btn:hover i { transform: scale(1.2); }
 
 .music-btn:hover { border-color: #f06292; }
@@ -104,11 +119,24 @@ body {
 
 .contacts-btn {
     margin-top: 30px;
-    background: #238636;
-    border-color: #2ea043;
+    background: #4a1942;
+    border-color: #7b2d8b;
     animation: fadeSlideIn 0.8s ease 0.6s both;
+    width: 150px;
+    padding: 15px 10px;
+    font-size: 1rem;
+    aspect-ratio: auto;
+    gap: 8px;
 }
-.contacts-btn:hover { background: #2ea043; }
+
+.contacts-btn i {
+    font-size: 1.5rem;
+}
+
+.contacts-btn:hover { 
+    background: #7b2d8b;
+    border-color: #a855f7;
+}
 
 .back-btn {
     background: #21262d;

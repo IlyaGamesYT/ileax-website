@@ -229,11 +229,11 @@ function addContent(section) {
     saveData(dataKey, data);
     
     // Показываем подсказку что файл нужно загрузить в папку data
-    const hint = document.createElement('div');
-    hint.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1c2128;border:1px solid #f0883e;padding:15px 20px;border-radius:10px;z-index:999;color:#c9d1d9;font-size:0.9rem;text-align:center;';
-    hint.innerHTML = `📁 Файл <b>"${fileName}"</b> добавлен в список.<br>⚠️ Загрузите его в папку <b>data</b> на GitHub!`;
-    document.body.appendChild(hint);
-    setTimeout(() => hint.remove(), 5000);
+    // const hint = document.createElement('div');
+    // hint.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1c2128;border:1px solid #f0883e;padding:15px 20px;border-radius:10px;z-index:999;color:#c9d1d9;font-size:0.9rem;text-align:center;';
+    // hint.innerHTML = `📁 Файл <b>"${fileName}"</b> добавлен в список.<br>⚠️ Загрузите его в папку <b>data</b> на GitHub!`;
+    // document.body.appendChild(hint);
+    // setTimeout(() => hint.remove(), 5000);
     
     document.getElementById(`new-${section}-title`).value = '';
     fileInput.value = '';
